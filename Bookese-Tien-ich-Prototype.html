@@ -238,7 +238,7 @@ const SEED_DETAILS={
 const STORE_KEY='bookese-amenities-extranet-v1';
 const clone=value=>JSON.parse(JSON.stringify(value));
 const DEFAULT_CONFIG={floors:1,rooms:14,languages:['Tiếng Việt','Tiếng Anh'],selected:SEED_IDS,featured:['1','17','37','41','47','69','85','101'],details:SEED_DETAILS,forms:{},closures:[{id:'sample-pool-closure',amenity:'69',scope:'Hồ bơi 1',start:'2026-09-20',end:'2026-09-27',reason:'Bảo trì định kỳ',note:'Hồ bơi trẻ em vẫn phục vụ bình thường.'}]};
-function readConfig(){try{const raw=JSON.parse(localStorage.getItem(STORE_KEY));return raw&&Array.isArray(raw.selected)&&Array.isArray(raw.closures)?{...clone(DEFAULT_CONFIG),...raw}:clone(DEFAULT_CONFIG)}catch{return clone(DEFAULT_CONFIG)}}
+function readConfig(){try{const previewKey=new URLSearchParams(location.search).get('preview');const raw=JSON.parse(previewKey?sessionStorage.getItem(STORE_KEY+':preview:'+previewKey):localStorage.getItem(STORE_KEY));return raw&&Array.isArray(raw.selected)&&Array.isArray(raw.closures)?{...clone(DEFAULT_CONFIG),...raw}:clone(DEFAULT_CONFIG)}catch{return clone(DEFAULT_CONFIG)}}
 const dateVN=value=>value?value.split('-').reverse().join('/'):'Chưa xác định';
 
 let propertyConfig=readConfig();
@@ -264,7 +264,7 @@ openDetail=function(id){originalOpenDetail(id);const area=$('#detail-content');i
 const originalRooms=roomAndPolicies;
 roomAndPolicies=function(){return originalRooms().replace('value="2026-09-23"',`value="${tripStart}"`).replace('value="2026-09-24"',`value="${tripEnd}"`)};
 document.addEventListener('submit',e=>{if(e.target.id==='room-search'&&e.target.checkValidity()){tripStart=e.target.elements.checkin.value;tripEnd=e.target.elements.checkout.value;document.querySelectorAll('[data-closure-notices]').forEach(el=>el.innerHTML=closureNotice());document.querySelectorAll('[data-closure-badge]').forEach(el=>el.innerHTML=closureBadge(el.dataset.closureBadge));refreshIcons()}});
-window.addEventListener('storage',e=>{if(e.key===STORE_KEY){propertyConfig=readConfig();setActive(current)}});
+window.addEventListener('storage',e=>{if(e.key===STORE_KEY&&!new URLSearchParams(location.search).has('preview')){propertyConfig=readConfig();setActive(current)}});
 
 // `variants` is an array of render functions, one per variant, in picker order.
 const stage = document.getElementById('stage');

@@ -169,7 +169,7 @@ function toolsBar(){return `<div class="tools"><input class="search" id="catalog
 function matching(a){return norm(a.name+' '+a.group).includes(norm(query))&&(filter!=='selected'||draft.selected.includes(a.id))&&(filter!=='details'||a.detail)}
 function groupCards(){return groups.map((g,gi)=>{const list=catalog.filter(a=>a.group===g&&matching(a));if(!list.length)return '';const selected=catalog.filter(a=>a.group===g&&draft.selected.includes(a.id));return `<article class="group-card"><header>${icon(groupIcons[gi])}<h3>${esc(g)}</h3><span class="count">${selected.length}</span><button class="link" data-edit-group="${gi}">Chỉnh sửa</button></header><div class="mini-tags">${selected.slice(0,5).map(a=>`<span>${esc(a.name)}</span>`).join('')}${selected.length>5?`<span>+${selected.length-5} tiện ích</span>`:''}${!selected.length?'<small>Chưa chọn tiện ích trong nhóm này.</small>':''}</div><div style="margin-top:12px">${selected.filter(a=>a.detail).map(a=>`<button class="link" style="font-size:12px" data-detail="${a.id}">${esc(a.name)} · ${draft.details[a.id]?'Sửa':'Thêm'} chi tiết ↗</button>`).join('')}</div></article>`}).join('')||'<div class="empty">Không tìm thấy tiện ích. Thử từ khóa khác.</div>'}
 function cards(){return infoPanel()+featuredPanel()+`<section class="panel">${summary('Danh mục tiện ích',`${draft.selected.length} tiện ích đã chọn · ${groups.length} nhóm`)}${toolsBar()}<div class="group-cards" id="catalog-results">${groupCards()}</div></section>`+closurePanel()}
-function amenityRow(a,modal=false){const selected=(modal?groupDraft.selected:draft.selected).includes(a.id),featured=(modal?groupDraft.featured:draft.featured).includes(a.id);return `<div class="amenity-row"><div><label class="check"><input type="checkbox" data-select="${a.id}" ${selected?'checked':''}>${esc(a.name)}</label>${a.id==='17'?'<div class="row-sub">Nhận giờ nào, trả đúng giờ đó ngày hôm sau.</div>':''}${draft.closures.some(c=>c.amenity===a.id)?'<div class="row-sub"><span class="tag warning">Có lịch tạm đóng</span></div>':''}</div><button class="star" data-star="${a.id}" aria-pressed="${featured}" ${!selected?'disabled':''}>${featured?'★':'☆'} Nổi bật</button>${a.detail&&!modal?`<button class="link" data-detail="${a.id}" ${!selected?'disabled':''}>${draft.details[a.id]?'Sửa':'Thêm'} chi tiết</button>`:`<small>${a.detail?'Có bảng chi tiết':'Có / Không'}</small>`}</div>`}
+function amenityRow(a,modal=false){const selected=(modal?groupDraft.selected:draft.selected).includes(a.id),featured=(modal?groupDraft.featured:draft.featured).includes(a.id),canEdit=a.id==='1'?!selected:a.detail&&selected;return `<div class="amenity-row"><div><label class="check"><input type="checkbox" data-select="${a.id}" ${selected?'checked':''}>${esc(a.name)}</label>${a.id==='1'&&!selected?'<div class="row-sub">Nhập khung giờ phục vụ nếu lễ tân không trực 24/24.</div>':''}${a.id==='17'?'<div class="row-sub">Nhận giờ nào, trả đúng giờ đó ngày hôm sau.</div>':''}${draft.closures.some(c=>c.amenity===a.id)?'<div class="row-sub"><span class="tag warning">Có lịch tạm đóng</span></div>':''}</div><button class="star" data-star="${a.id}" aria-pressed="${featured}" ${!selected?'disabled':''}>${featured?'★':'☆'} Nổi bật</button>${canEdit?`<button class="link" data-detail="${a.id}" aria-label="Cập nhật chi tiết ${esc(a.id==='1'?'khung giờ lễ tân':a.name)}">Có bảng chi tiết ↗</button>`:'<span></span>'}</div>`}
 function rows(){const list=catalog.filter(a=>(query||filter!=='all'||a.group===groups[activeGroup])&&matching(a));return list.length?list.map(a=>amenityRow(a)).join(''):'<div class="empty">Không tìm thấy tiện ích phù hợp.</div>'}
 function selectionPanel(){return `<div class="sidebar-layout"><nav class="side-nav" aria-label="Nhóm tiện ích"><h3>DANH MỤC TIỆN ÍCH</h3>${groups.map((g,i)=>`<button class="${i===activeGroup?'active':''}" data-group="${i}"><span>${esc(g)}</span><span>${catalog.filter(a=>a.group===g&&draft.selected.includes(a.id)).length}</span></button>`).join('')}</nav><section class="panel">${summary(query?'Kết quả tìm kiếm':esc(groups[activeGroup]),'Bật tiện ích có tại chỗ nghỉ; nhập chi tiết nếu có thông tin.')} ${toolsBar()}<div class="table-head"><span>Tiện ích tại chỗ nghỉ</span><span>Tag nổi bật</span><span>Thông tin</span></div><div id="catalog-results">${rows()}</div></section></div>`}
 function list(){return infoPanel()+featuredPanel()+selectionPanel()+closurePanel()}
@@ -180,7 +180,7 @@ function closeDialog(){$('#editor').close();groupDraft=null}
 function foot(text='Áp dụng',attr='type="submit"'){return `<div class="dialog-foot"><button class="btn" type="button" data-close>Hủy</button><button class="btn primary" ${attr}>${text}</button></div>`}
 function toggleFeature(id,state){if(state.featured.includes(id)){state.featured=state.featured.filter(x=>x!==id);return true}if(state.featured.length>=8){toast('Tối đa 8 tiện ích nổi bật. Hãy bỏ một tiện ích trước.');return false}state.featured.push(id);return true}
 function openGroup(index){groupDraft={selected:[...draft.selected],featured:[...draft.featured],index};renderGroupDialog()}
-function renderGroupDialog(){const g=groups[groupDraft.index];showDialog(g,'CHỌN TIỆN ÍCH TẠI CHỖ NGHỈ',`<p>Đánh dấu tiện ích đang có. Có thể nhập chi tiết từ thẻ nhóm sau khi áp dụng.</p><div>${catalog.filter(a=>a.group===g).map(a=>amenityRow(a,true)).join('')}</div>${foot('Áp dụng','type="button" data-apply-group')}`)}
+function renderGroupDialog(){const g=groups[groupDraft.index];showDialog(g,'CHỌN TIỆN ÍCH TẠI CHỖ NGHỈ',`<p>Đánh dấu tiện ích đang có. Bấm “Có bảng chi tiết” để cập nhật ngay tại đây.</p><div>${catalog.filter(a=>a.group===g).map(a=>amenityRow(a,true)).join('')}</div>${foot('Áp dụng','type="button" data-apply-group')}`)}
 function pickFeatured(){groupDraft={selected:[...draft.selected],featured:[...draft.featured],featuredOnly:true};renderFeaturedDialog()}
 function renderFeaturedDialog(){showDialog('Chọn tiện ích nổi bật',`${groupDraft.featured.length}/8 TIỆN ÍCH`,draft.selected.map(id=>find(id)).filter(Boolean).map(a=>`<div class="amenity-row" style="grid-template-columns:1fr 110px"><span>${esc(a.name)}</span><button class="star" data-star="${a.id}" aria-pressed="${groupDraft.featured.includes(a.id)}">${groupDraft.featured.includes(a.id)?'★':'☆'} Nổi bật</button></div>`).join('')+foot('Áp dụng','type="button" data-apply-group'))}
 const choicesExtra={'Danh mục ẩm thực':['Món Việt','Món Á','Món Âu','Món nướng/BBQ','Món chay'],'Danh mục ngôn ngữ':['Tiếng Việt','Tiếng Anh','Tiếng Hàn','Tiếng Trung','Tiếng Nhật','Tiếng Pháp'],'Danh mục món ăn kiêng':['Món chay','Thuần chay','Không gluten','Không sữa và chế phẩm từ sữa','Halal']};
@@ -220,6 +220,48 @@ preview=function(){
   showDialog('Xem trước trang khách hàng','DỮ LIỆU BẠN VỪA NHẬP · CHƯA LƯU',`<iframe class="customer-preview-frame" title="Trang khách hàng — xem trước dữ liệu chưa lưu" src="Bookese-Tien-ich-Prototype.html?v=1&preview=${token}#description"></iframe><div class="preview-actions"><button class="btn" data-close>Quay lại chỉnh sửa</button><button class="btn primary" data-save-open>Lưu & mở trang khách ↗</button></div>`);
 };
 $('#editor').addEventListener('close',()=>{ $('#editor').classList.remove('customer-preview-dialog');if(previewSnapshotKey){sessionStorage.removeItem(previewSnapshotKey);previewSnapshotKey=null} });
+
+// Reception hours are only applicable when the 24-hour checkbox is off.
+DATA.schemas['Lễ tân 24/24']=DATA.schemas['Lễ tân 24/24'].filter(f=>f.field!=='Trực lễ tân 24/24');
+let detailReturn=null,applyingDetail=false;
+const baseOpenDetail=openDetail,baseCloseDialog=closeDialog,baseApplyDetails=applyDetails,baseRenderDetail=renderDetail,baseGroupCards=groupCards;
+groupCards=function(){return baseGroupCards().replace(/<button[^>]*data-detail="1"[^>]*>.*?<\/button>/g,'')};
+openDetail=function(id){
+  const state=groupDraft||draft;
+  if(id==='1'?state.selected.includes(id):!state.selected.includes(id))return;
+  if(groupDraft&&!groupDraft.featuredOnly){
+    detailReturn={group:groupDraft,before:draft};
+    draft=clone(groupDraft.pendingConfig||draft);
+    draft.selected=[...groupDraft.selected];draft.featured=[...groupDraft.featured];
+  }
+  baseOpenDetail(id);
+};
+renderDetail=function(){baseRenderDetail();if(detailId==='1'){
+  $('#editor-title').textContent='Khung giờ lễ tân';
+  document.querySelectorAll('.instance-head h3').forEach(el=>el.textContent='Lễ tân phục vụ theo khung giờ');
+  document.querySelectorAll('#detail-form input[type=time]').forEach(el=>el.required=true);
+}};
+closeDialog=function(){
+  if(detailReturn){
+    const context=detailReturn;
+    if(applyingDetail)context.group.pendingConfig=clone(draft);
+    draft=context.before;groupDraft=context.group;detailReturn=null;
+    markDirty();renderGroupDialog();return;
+  }
+  baseCloseDialog();
+};
+applyDetails=function(){
+  if(detailId==='1')detailForms.forEach(f=>f._title='Lễ tân');
+  applyingDetail=true;try{baseApplyDetails()}finally{applyingDetail=false}
+};
+// Commit nested detail changes only when the group itself is applied.
+document.addEventListener('click',e=>{
+  if(e.target.closest('[data-apply-group]')&&groupDraft?.pendingConfig){
+    const config=groupDraft.pendingConfig;
+    draft.details=config.details;draft.forms=config.forms;draft.closures=config.closures;draft.languages=config.languages;
+  }
+},true);
+$('#editor').addEventListener('cancel',e=>{if(detailReturn){e.preventDefault();closeDialog()}});
 
 // `variants` is an array of render functions, one per variant, in picker order.
 const stage = document.getElementById('stage');

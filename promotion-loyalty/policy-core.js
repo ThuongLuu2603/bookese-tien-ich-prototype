@@ -7,7 +7,7 @@ function check(p,s,d){
  const a=Date.parse(p.boostStart+'+07:00'),b=Date.parse(p.boostEnd+'+07:00'),booking=Date.parse(s.book+'T12:00:00+07:00');
  if(!Number.isFinite(a)||!Number.isFinite(b)||b<=a||b-a>72*3600000)return 'Cần cấu hình đợt tối đa 72 giờ';
  if(booking<a||booking>=b)return 'Ngoài đợt Thứ hạng (giả lập đặt lúc 12:00)';
- if(!Number.isInteger(Number(p.inventory))||Number(p.inventory)<1)return 'Chưa cấu hình hạn lượng phòng';
+
  }
  if(s.book<p.start||s.book>p.end)return 'Ngoài thời gian nhận đặt';
  if(p.wholeStay&&(s.stay<p.stayStart||date(s.stay,s.nights-1)>p.stayEnd))return 'Cần toàn bộ kỳ lưu trú trong lịch';
@@ -22,6 +22,7 @@ function check(p,s,d){
  if(p.type==='Đặt sớm'&&lead<p.threshold)return 'Chưa đủ ngày đặt trước';
  if(p.type==='Dài hạn'&&s.nights<p.threshold)return 'Chưa đủ số đêm';
  if(p.type==='Thị trường khách')return 'Theo quốc gia chưa mở';
+ if(p.type==='Package'&&(!s.packageId||s.packageId!==p.packageId||s.packageKind!==p.packageKind))return 'Cần combo khách sạn cùng vé máy bay / dịch vụ du lịch phù hợp';
  if(p.type==='Di động'&&(!['web-mobile','app'].includes(s.channel)||(p.channel&&p.channel!=='both'&&p.channel!==s.channel)))return 'Không đúng kênh di động';
  return '';
 }

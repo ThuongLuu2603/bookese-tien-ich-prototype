@@ -22,6 +22,11 @@ function check(p,s,d){
  if(p.type==='Đặt sớm'&&lead<p.threshold)return 'Chưa đủ ngày đặt trước';
  if(p.type==='Dài hạn'&&s.nights<p.threshold)return 'Chưa đủ số đêm';
  if(p.type==='Thị trường khách')return 'Theo quốc gia chưa mở';
+ if(p.group==='market'&&s.bookingMode==='agency'&&p.type!=='Đại lý')return 'Đặt hộ chỉ xét kênh Đại lý';
+ if(p.type==='Đại lý'&&(s.bookingMode!=='agency'||!s.partnerVerified||!s.partnerId))return 'Cần đại lý xác thực thực hiện đặt hộ';
+ if(p.type==='Đại lý'&&p.partnerScope==='selected'&&!(p.partnerIds||'').split(',').includes(s.partnerId))return 'Đại lý không nằm trong danh sách tài trợ';
+ if(p.type==='Đại sứ'&&(s.bookingMode==='agency'||!s.ambassadorVerified||s.ambassadorId!==p.ambassadorId||s.ambassadorCode!==p.ambassadorCode||!p.sponsorConsent||s.packageId))return 'Cần nguồn Đại sứ đúng mã, đúng chỗ nghỉ và khách tự đặt phòng lẻ';
+ if(p.type==='Di động'&&s.packageId)return 'Combo không cộng ưu đãi Di động';
  if(p.type==='Package'&&(!s.packageId||s.packageId!==p.packageId||s.packageKind!==p.packageKind))return 'Cần combo khách sạn cùng vé máy bay / dịch vụ du lịch phù hợp';
  if(p.type==='Di động'&&(!['web-mobile','app'].includes(s.channel)||(p.channel&&p.channel!=='both'&&p.channel!==s.channel)))return 'Không đúng kênh di động';
  return '';
@@ -34,7 +39,7 @@ function quote(data,s,prices){
  for(let i=0;i<s.nights;i++){
   let d=date(s.stay,i),base=prices[i],floor=Math.ceil(base*(10000-Math.round(data.maxDiscount*100))/10000),eligible=data.items.filter(p=>!check(p,s,d)),combos=[];
   const add=(branch,ps)=>{let price=base;for(const p of ps)price=Math.floor(price*(10000-Math.round(p.rate*100))/10000);combos.push({branch,ps,price,ok:price>=floor})};
-  const m=s.tier<0||!data.member||data.memberExcluded?.includes(d)?0:s.tier===2&&data.member===2?15:10,mem=m?[{name:'Giá thành viên',rate:m}]:[];
+  const m=s.bookingMode==='agency'||s.tier<0||!data.member||data.memberExcluded?.includes(d)?0:s.tier===2&&data.member===2?15:10,mem=m?[{name:'Giá thành viên',rate:m}]:[];
   eligible.filter(p=>p.group==='exclusive').forEach(p=>add('A',[p]));eligible.filter(p=>p.group==='campaign').forEach(p=>add('B',[p,...mem]));
   for(const c of [null,...eligible.filter(p=>p.group==='condition')])for(const t of [null,...eligible.filter(p=>p.group==='market')])add('C',[c,t,...mem].filter(Boolean));add('Gốc',[]);
   combos.sort((a,b)=>a.price-b.price||a.ps.length-b.ps.length||a.branch.localeCompare(b.branch)||a.ps.map(p=>p.id||0).join(',').localeCompare(b.ps.map(p=>p.id||0).join(',')));

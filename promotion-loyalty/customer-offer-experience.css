@@ -29,3 +29,4 @@
 @media(max-width:600px){.price-popover{padding:16px}.pp-row{gap:10px}}
 
 .pp-applied{margin:8px 0 16px;padding:0 0 12px;border-bottom:1px solid #dedeea}.pp-applied .pp-row{font-size:14px;margin:7px 0;color:#347459}.pp-applied small{font-size:11px;color:#8a8d9f}.pp-applied>div+div{margin-top:12px}
+.search-price-amount{display:flex;justify-content:flex-end;align-items:center;gap:5px}.hotel-card .search-price-amount button{margin:0;padding:0 3px}.pp-checkout-adjustments{margin-top:14px}.pp-payable{border-top:1px solid #dedeea;padding-top:14px;color:#065bce}.unified-price-ticket .pp-row{font-size:14px}.unified-price-ticket .pp-row>span:last-child{font-size:13px}.unified-price-ticket em{font-size:12px;color:#999aaf}.unified-price-ticket .pp-section{margin-top:20px}.unified-price-ticket .pp-coins{padding-bottom:15px;border-bottom:1px solid #dedeea}.unified-price-ticket .pp-payable b{font-size:17px}.unified-price-ticket .pp-payable b:last-child{white-space:nowrap}

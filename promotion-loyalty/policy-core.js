@@ -16,7 +16,7 @@ function check(p,s,d){
  if(d<p.stayStart||d>p.stayEnd)return 'Đêm ngoài lịch ưu đãi';
  if(p.weekdays&&!p.weekdays.includes(new Date(day(d)).getUTCDay()))return 'Ngày trong tuần không áp dụng';
  
- if(p.room!=='all'&&p.room!==s.room)return 'Không áp dụng phòng / loại giá này';
+ if(Array.isArray(p.roomRates)){if(!p.roomRates.includes(s.room+'|'+(s.ratePlan||'flex')))return 'Không áp dụng phòng / loại giá này';}else if(p.room!=='all'&&(p.room!==s.room||(s.ratePlan||'flex')!=='flex'))return 'Không áp dụng phòng / loại giá này';
  const lead=Math.round((day(s.stay)-day(s.book))/86400000);
  if(p.type==='Phút chót'&&lead>p.threshold)return 'Đặt quá sớm';
  if(p.type==='Đặt sớm'&&lead<p.threshold)return 'Chưa đủ ngày đặt trước';

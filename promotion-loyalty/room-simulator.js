@@ -1,0 +1,2 @@
+const beforeRoomSim=renderSim;renderSim=function(){beforeRoomSim();const label=[...document.querySelectorAll('#content aside label')].find(x=>x.textContent.includes('Phòng / loại giá'));if(label){label.innerHTML=`Phòng / loại giá<select onchange="[sim.room,sim.ratePlan]=this.value.split('|');updateResults()">${roomRateChoices.map(([k,n])=>`<option value="${k}" ${k===sim.room+'|'+(sim.ratePlan||'flex')?'selected':''}>${n}</option>`).join('')}</select>`}};
+if(targetView==='simulate')targetRender();

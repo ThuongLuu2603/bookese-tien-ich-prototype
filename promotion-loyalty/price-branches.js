@@ -1,0 +1,22 @@
+(function(){
+ const style=document.createElement('style');style.textContent=`.price-branches{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.price-branch{border:1px solid #dce4ee;padding:12px;display:flex;flex-direction:column;min-width:0}.price-branch.winner{border:2px solid #168160;background:#f5fcf8}.branch-layers{display:grid;grid-template-rows:repeat(3,minmax(72px,auto));gap:5px;margin:14px 0}.branch-layer{padding:10px;font-size:12px;background:#edf2f6}.branch-layer strong,.branch-layer small{display:block}.branch-layer small{margin-top:5px;line-height:1.5}.branch-layer.member,.branch-layer.exclusive{background:#dceeff;color:#20568a}.branch-layer.condition{background:#e7f7eb}.branch-layer.empty{padding:10px;background:#f7f8fa;color:#8793a5;text-align:left}.branch-layer.spacer{background:transparent}.branch-price{font-size:20px;font-weight:700;margin:10px 0}.branch-reason{font-size:12px;line-height:1.6;color:#758297}.branch-base{background:#fff1c5;padding:14px;margin-top:8px;font-size:13px}.branch-status{font-size:11px;font-weight:600;min-height:30px}.branch-foot{font-size:12px;line-height:1.7;margin-top:14px}@media(max-width:1100px){.price-branches{grid-template-columns:1fr}.branch-layers{grid-template-rows:none;grid-template-columns:repeat(3,minmax(0,1fr))}.branch-layer.spacer{display:none}}`;
+ document.head.append(style);
+ const previous=updateResults;
+ updateResults=function(){
+  previous();const config=configForQuote(),q=P.quote(config,sim,sim.nightPrices);if(q.error)return;
+  const r=q.rows[Math.min(selectedNight,q.rows.length-1)];
+  const layer=(title,p,kind)=>`<div class="branch-layer ${p?kind:'empty'}"><strong>${title}</strong><small>${p?esc(p.name)+' · '+p.rate+'%':'Không áp dụng'}</small></div>`;
+  const cards=['A','B','C'].map(branch=>{
+   const combos=r.combos.filter(c=>c.branch===branch),valid=combos.find(c=>c.ok),shown=valid||combos[0],ps=shown?.ps||[],win=valid===r.best;
+   const member=ps.find(p=>p.name==='Giá thành viên'),find=g=>ps.find(p=>p.group===g);
+   const title={A:'Ưu đãi độc quyền',B:'Chiến dịch + thành viên',C:'Điều kiện + thị trường + thành viên'}[branch];
+   const layers=branch==='A'?'<div class="branch-layer spacer"></div><div class="branch-layer spacer"></div>'+layer('Giảm sâu / Thứ hạng',find('exclusive'),'exclusive'):branch==='B'?'<div class="branch-layer spacer"></div>'+layer('Ưu đãi chiến dịch',find('campaign'),'campaign')+layer('Giá thành viên',member,'member'):layer('Ưu đãi theo điều kiện',find('condition'),'condition')+layer('Nhắm theo thị trường · Di động',find('market'),'market')+layer('Giá thành viên',member,'member');
+   const missing=config.items.filter(p=>p.group===(branch==='A'?'exclusive':'campaign')).map(p=>({name:p.name,reason:P.check(p,sim,r.date)})).filter(p=>p.reason);
+   const reason=!shown?(missing.length?missing.map(p=>esc(p.name)+': '+esc(p.reason)).join('<br>'):branch==='A'?'Chưa có ưu đãi độc quyền đủ điều kiện.':'Chưa có ưu đãi chiến dịch đang áp dụng cho chỗ nghỉ.') : !valid?'Các tổ hợp của nhánh đều thấp hơn giá sàn.':ps.length===0?'Không có ưu đãi phù hợp; nhánh trở về giá gốc.':`${combos.filter(c=>c.ok).length} tổ hợp đạt sàn · hiển thị giá thấp nhất của nhánh.`;
+   return `<article class="price-branch ${win?'winner':''}"><strong>Nhánh ${branch}</strong><p class="small">${title}</p><div class="branch-status">${win?'✓ ĐƯỢC CHỌN':!shown?'KHÔNG ĐỦ ĐIỀU KIỆN':!valid?'LOẠI · DƯỚI SÀN':'ĐẠT SÀN'}</div><div class="branch-layers">${layers}</div><div class="branch-price">${shown?money(shown.price):'—'}</div><div class="branch-reason">${reason}</div></article>`;
+  }).join('');
+  const section=document.createElement('section');section.className='card';section.id='price-branches';section.innerHTML=`<h2>So sánh 3 nhánh kết hợp giá</h2><p class="small muted">Đêm ${r.date} · Ba phương án độc lập, không cộng chéo giữa các nhánh.</p><div class="price-branches">${cards}</div><div class="branch-base"><b>Giá gốc: ${money(r.base)}</b> &nbsp; · &nbsp; Giá sàn đêm này: ${money(r.floor)}</div><div class="branch-foot">Mỗi nhóm lấy tối đa một ưu đãi. Giảm lần lượt trên giá còn lại, không cộng các tỷ lệ %. A không kết hợp giá thành viên; B và C kết hợp khi khách đủ điều kiện.<br><b>Chọn giá thấp nhất đạt sàn cho từng đêm → áp mã Bookese tại checkout → dùng xu → thanh toán.</b></div>`;
+  document.querySelector('#results').firstElementChild.after(section);
+ };
+ if(targetView==='simulate')targetRender();
+})();

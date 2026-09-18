@@ -2,6 +2,7 @@
 const day=s=>Date.parse(s+'T00:00:00Z'),date=(s,n)=>new Date(day(s)+n*86400000).toISOString().slice(0,10);
 function check(p,s,d){
  if(p.status!=='active')return 'Chương trình chưa hoạt động';
+ if(p.type==='Flash Sale'){const a=Date.parse(p.boostStart+'+07:00'),b=Date.parse(p.boostEnd+'+07:00'),booking=Date.parse(s.book+'T12:00:00+07:00');if(!Number.isFinite(a)||!Number.isFinite(b)||b<=a||booking<a||booking>=b)return 'Ngoài cửa sổ Flash Sale (giả lập đặt lúc 12:00)';}
  if(p.type==='Thứ hạng'){
  const a=Date.parse(p.boostStart+'+07:00'),b=Date.parse(p.boostEnd+'+07:00'),booking=Date.parse(s.book+'T12:00:00+07:00');
  if(!Number.isFinite(a)||!Number.isFinite(b)||b<=a||b-a>72*3600000)return 'Cần cấu hình đợt tối đa 72 giờ';

@@ -22,7 +22,7 @@ window.VoucherModel = (() => {
       d.voucherBalances[user]=balance-Number(gift.price);
     }
     const code=type(c)==='PARTNER'?(c.codes||[]).find(code=>!records(c).some(r=>r.code===code)):'BK'+crypto.randomUUID().replaceAll('-','').slice(0,16).toUpperCase();
-    const r={id:crypto.randomUUID(),code,user,source,reason:reason||'',at:new Date().toISOString(),expiry:c.expiry,status:'Chưa sử dụng',delivery:'Đã gửi quà',campaignId:c.id,campaignName:c.name,voucherType:type(c),service:c.service||'hotel',partner:c.partner||'',terms:c.terms||'',discount:c.discount,value:c.value,cap:c.cap,min:c.min||0,tier:c.tier||'all',audience:c.audience||'all',accountGroup:c.accountGroup||'all',giftId:gift?.id||'',giftName:gift?.name||'',coins:Number(gift?.price||0)};
+    const r={id:crypto.randomUUID(),code,user,source,reason:reason||'',at:new Date().toISOString(),expiry:c.expiry,status:'Chưa sử dụng',delivery:'Đã gửi quà',campaignId:c.id,campaignName:c.name,voucherType:type(c),service:c.service||'hotel',partner:c.partner||'',terms:c.terms||'',discount:source==='direct'?'amount':c.discount,value:c.value,cap:source==='direct'?'':c.cap,min:c.min||0,tier:'all',audience:'all',accountGroup:'all',giftId:gift?.id||'',giftName:gift?.name||'',coins:Number(gift?.price||0)};
     c.issued=[...records(c),r];
     if(gift)d.voucherExchanges.push(r);
     return r;

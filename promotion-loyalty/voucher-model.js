@@ -15,6 +15,7 @@ window.VoucherModel = (() => {
     d.voucherBalances ||= {}; d.voucherExchanges ||= [];
     if(gift){
       if(gift.status!=='Công khai')throw Error('Quà chưa công khai.');
+      if(gift.limited&&((gift.limitStart&&gift.limitStart>today())||(gift.limitEnd&&gift.limitEnd<today())))throw Error('Quà ngoài thời gian đổi giới hạn.');
       if(d.voucherExchanges.filter(r=>r.user===user&&r.giftId===gift.id).length>=Number(gift.limit||1))throw Error('Đã đạt giới hạn đổi quà.');
       const balance=d.voucherBalances[user]??100000;
       if(balance<Number(gift.price))throw Error('Không đủ xu.');

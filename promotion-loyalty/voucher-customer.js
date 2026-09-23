@@ -10,5 +10,8 @@ voucherResult=function(){const d=voucherRead(),c=(d.campaigns||[]).find(c=>(c.co
 const voucherOwnerResult=voucherResult;
 voucherResult=function(){const d=voucherRead(),c=(d.campaigns||[]).find(c=>c.code===customer.code||VC.records(c).some(r=>r.code===customer.code));if(c){const r=VC.records(c).find(r=>r.code===customer.code)||c;if(r.audience==='first')return {discount:0,reason:'Cần xác minh điều kiện khách mới trước khi dùng mã.'};if(r.tier&&r.tier!=='all'&&r.tier!==['member','friendly','loyal'][customer.tier])return {discount:0,reason:'Tài khoản chưa đúng hạng thành viên của mã.'};if(r.accountGroup&&r.accountGroup!=='all'&&r.accountGroup!=='traveler')return {discount:0,reason:'Mã yêu cầu xác minh đối tượng '+r.accountGroup+'. Tài khoản khách mẫu hiện tại chưa được xác minh đối tượng này.'};if(VC.type(c)==='BOOKESE_PUBLIC'&&!VC.active(c))return {discount:0,reason:'Mã công khai ngoài thời hạn sử dụng hoặc chưa phát hành.'}}return voucherOwnerResult()};
 availablePropertyCodes=function(){return vouchers().filter(c=>VC.type(c)==='BOOKESE_PUBLIC'&&VC.active(c)&&propertyCodeEligible(c)&&Number(c.quota)>0&&Number(c.budget)>0)};
+const serviceVoucherResult=voucherResult,serviceAvailableCodes=availablePropertyCodes;
+voucherResult=function(){const c=(voucherRead().campaigns||[]).find(c=>c.code===customer.code||VC.records(c).some(r=>r.code===customer.code));const scope=c&&(VC.records(c).find(r=>r.code===customer.code)||c).service;if(scope&&scope!=='all'&&scope!=='hotel')return {discount:0,reason:'Mã không áp dụng cho dịch vụ Lưu trú.'};return serviceVoucherResult()};
+availablePropertyCodes=function(){return serviceAvailableCodes().filter(c=>!c.service||c.service==='all'||c.service==='hotel')};
 renderCustomer();
 

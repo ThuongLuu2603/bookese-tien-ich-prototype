@@ -27,7 +27,7 @@ targetRender();
 const operationalSim=renderSim;
 renderSim=function(){
  const store=JSON.parse(localStorage.getItem('bookese-intranet-ui-v1')||'{"campaigns":[]}');
- coupons.splice(0,coupons.length,...(store.campaigns||[]).filter(x=>x.kind==='promo').map(x=>({code:x.code,kind:x.discount,value:+x.value,cap:+x.cap,min:+x.min,budget:+x.budget,quota:+x.quota,active:x.status==='Đang chạy',source:x})));
+ coupons.splice(0,coupons.length,...(store.campaigns||[]).filter(x=>x.kind==='promo'&&x.distribution!=='personal'&&(!x.voucherType||x.voucherType==='BOOKESE_PUBLIC')).map(x=>({code:x.code,kind:x.discount,value:+x.value,cap:+x.cap,min:+x.min,budget:+x.budget,quota:+x.quota,active:x.status==='Đang chạy',source:x})));
  operationalSim();const box=$('#content aside'),inp=box?.querySelector('input');if(inp)inp.readOnly=true;const b=box?.querySelector('button');if(b){b.textContent='Mở cấu hình bảo vệ giá';b.onclick=()=>targetGo('floor')}
 };
 const policyPromo=P.promo;P.promo=function(total,p){if(p?.source){const x=p.source,program=T.read().programs.find(z=>z.id===x.program);if(x.program&&program?.status!=='Đang mở')return{discount:0,reason:'Đợt tiếp thị chưa mở'};if(sim.book<x.start||sim.book>x.end||sim.book>x.expiry)return{discount:0,reason:'Ngoài thời gian áp mã'};if(sim.stay<x.stayStart||P.date(sim.stay,sim.nights-1)>x.stayEnd)return{discount:0,reason:'Ngoài lịch dịch vụ của mã'};if(x.channel!=='all'&&x.channel!==(sim.channel==='web-mobile'?'mobile':sim.channel))return{discount:0,reason:'Không đúng kênh của mã'};if(x.tier!=='all'&&['member','friendly','loyal'][sim.tier]!==x.tier)return{discount:0,reason:'Không đúng hạng của mã'};if(x.audience==='first')return{discount:0,reason:'Cần xác minh đơn đầu tại checkout'}}return policyPromo(total,p)};

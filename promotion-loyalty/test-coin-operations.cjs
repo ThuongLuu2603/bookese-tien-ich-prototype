@@ -1,0 +1,10 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert/strict');
+const store=new Map();const ctx={console,structuredClone,crypto:require('crypto').webcrypto,URLSearchParams,Date,document:{querySelector:()=>null},localStorage:{getItem:k=>store.get(k)||null,setItem:(k,v)=>store.set(k,String(v)),removeItem:k=>store.delete(k)}};ctx.window=ctx;vm.createContext(ctx);
+for(const f of ['loyalty-core.js','voucher-model.js','loyalty-operations.js'])vm.runInContext(fs.readFileSync(f,'utf8'),ctx);
+const L=ctx.BookeseLoyalty,O=ctx.CoinOps,user='coin-test';let s=L.sample();s.today=ctx.VoucherModel.today();s.lots=[{id:'early',status:'Khả dụng',expiry:'2027-01-01',remaining:50000},{id:'late',status:'Khả dụng',expiry:'2028-01-01',remaining:50000}];s.logs=[];L.write(s,user);
+let d=JSON.parse(store.get('bookese-intranet-ui-v1'));d.gifts=[{id:'gift',name:'Quà kiểm tra',status:'Công khai',giftType:'EXCLUSIVE',price:60000,stock:2,limit:1}];store.set('bookese-intranet-ui-v1',JSON.stringify(d));
+const record=O.redeemGift('gift',user);s=L.read(user);assert.equal(L.balance(s),40000);assert.equal(s.lots[0].remaining,0);assert.equal(s.lots[1].remaining,40000);assert.equal(s.logs[0].id,record.coinTransaction);assert.equal(s.logs[0].before,100000);assert.equal(s.logs[0].after,40000);assert.equal(s.monthUsed,L.sample().monthUsed);
+const before=JSON.stringify([...store]);assert.throws(()=>O.redeemGift('gift',user));assert.equal(JSON.stringify([...store]),before);
+d=JSON.parse(store.get('bookese-intranet-ui-v1'));assert.equal(d.gifts[0].stock,1);assert.equal(d.voucherExchanges[0].coinTransaction,record.coinTransaction);assert.equal(d.voucherBalances[user],40000);
+d.gifts.push({id:'empty',name:'Hết hàng',status:'Công khai',giftType:'EXCLUSIVE',price:1,stock:0});store.set('bookese-intranet-ui-v1',JSON.stringify(d));const snap=JSON.stringify([...store]);assert.throws(()=>O.redeemGift('empty',user));assert.equal(JSON.stringify([...store]),snap);
+console.log('PASS: FEFO gift debit, shared balance, linked ledger, unchanged monthly quota, rejected repeat/insufficient/out-of-stock without mutation');

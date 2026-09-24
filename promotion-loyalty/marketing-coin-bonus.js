@@ -18,15 +18,24 @@
     selector.innerHTML=`Dịch vụ của đợt tiếp thị<select name="serviceType" ${hasData?'disabled':''}><option value="stay" ${service(p)==='stay'?'selected':''}>Lưu trú</option><option value="flight" ${service(p)==='flight'?'selected':''}>Vé máy bay</option></select>`;
     marketFieldset.before(selector);
     if(hasData)selector.insertAdjacentHTML('beforeend','<small class="muted">Đợt đã có cấu hình liên kết; giữ nguyên dịch vụ.</small>');
-    const toggle=()=>{marketFieldset.hidden=form.elements.serviceType.value==='flight';if(marketFieldset.hidden){form.querySelector('[name="marketScope"][value="all"]').checked=true;marketFieldset.querySelectorAll('[name="markets"]').forEach(input=>input.checked=false)}};
+    const flightScope=document.createElement('div');
+    flightScope.innerHTML=select('Phạm vi chuyến bay','flightScope',Object.entries(scopes),p.flightScope||p.flightConditions?.scope||'all');
+    marketFieldset.after(flightScope);
+    const toggle=()=>{const flight=form.elements.serviceType.value==='flight';marketFieldset.hidden=flight;flightScope.hidden=!flight;form.elements.flightScope.disabled=!flight;if(flight){form.querySelector('[name="marketScope"][value="all"]').checked=true;marketFieldset.querySelectorAll('[name="markets"]').forEach(input=>input.checked=false)}};
     form.elements.serviceType.onchange=toggle;
     toggle();
     const previousSubmit=form.onsubmit;
     form.onsubmit=event=>{
       const type=form.elements.serviceType.value;
+      const scope=form.elements.flightScope.value;
+      if(type==='flight'&&p.flightConditions&&window.FlightMarketingConditions){
+        const nextProgram={...p,flightScope:scope,start:form.elements.start?.value||p.start,end:form.elements.end?.value||p.end};
+        const problem=FlightMarketingConditions.validate(FlightMarketingConditions.normalize(p.flightConditions,nextProgram),nextProgram);
+        if(problem){event.preventDefault();toast(problem);return}
+      }
       previousSubmit(event);
       if(document.querySelector('#modal').open)return;
-      T.update(data=>{const saved=data.programs.find(item=>item.id===programId);saved.serviceType=type;if(type==='flight')saved.markets=[]},'Lưu dịch vụ đợt tiếp thị');
+      T.update(data=>{const saved=data.programs.find(item=>item.id===programId);saved.serviceType=type;if(type==='flight'){saved.markets=[];saved.flightScope=scope;if(saved.flightConditions)saved.flightConditions.scope=scope}},'Lưu dịch vụ đợt tiếp thị');
       programDetail();
     };
   };
@@ -107,8 +116,8 @@
       if(!p)return;
       row.cells[0].insertAdjacentHTML('afterend',`<td>${serviceName(p)}</td>`);
       if(service(p)==='flight'){
-        row.cells[3].textContent='—';
-        row.cells[4].textContent=p.flightConditions?'1':'0';
+        row.cells[3].textContent=scopes[p.flightScope||p.flightConditions?.scope||'all'];
+        row.cells[4].textContent=p.flightConditions?'Đã thiết lập':'Chưa thiết lập';
       }
     });
   };
@@ -119,6 +128,7 @@
     if(!head)return;
     head.cells[0].insertAdjacentHTML('afterend','<th>Dịch vụ</th>');
     head.cells[4].textContent='Ưu đãi / điều kiện';
+    head.cells[3].textContent='Phạm vi áp dụng';
   };
 
   const previousCampaignForm=campaignForm;
@@ -172,7 +182,7 @@
     const registrations=cards.find(card=>card.querySelector('h2')?.textContent==='Chỗ nghỉ đăng ký');
     if(header){
       header.insertAdjacentHTML('beforeend',`<p><b>Dịch vụ:</b> ${serviceName(p)}</p>`);
-      if(flight){const market=[...header.querySelectorAll('p')].find(item=>item.textContent.startsWith('Thị trường:'));market?.remove()}
+      if(flight){const market=[...header.querySelectorAll('p')].find(item=>item.textContent.startsWith('Thị trường:'));market?.remove();header.insertAdjacentHTML('beforeend',`<p><b>Phạm vi chuyến bay:</b> ${e(scopes[p.flightScope||p.flightConditions?.scope||'all'])}</p>`)}
     }
     let preceding=lodging;
     if(flight){

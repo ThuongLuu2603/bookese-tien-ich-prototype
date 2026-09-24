@@ -1,17 +1,79 @@
-/* Offer and coin settings live on the existing marketing-period detail page. */
+/* A marketing period belongs to either lodging or flights. Both can link vouchers. */
 (function(){
   const T=BookeseTarget;
-  const scopeLabel={all:'Tất cả chuyến bay',domestic:'Nội địa',international:'Quốc tế'};
+  const service=p=>p?.serviceType==='flight'?'flight':'stay';
+  const serviceName=p=>service(p)==='flight'?'Vé máy bay':'Lưu trú';
   const number=value=>Number(value||0).toLocaleString('vi-VN');
-  const activePeriod=()=>targetProgram()?.status==='Đang mở';
+  const scopes={all:'Tất cả chuyến bay',domestic:'Nội địa',international:'Quốc tế'};
+
+  const previousProgramForm=programForm;
+  programForm=function(id){
+    previousProgramForm(id);
+    const p=T.read().programs.find(item=>item.id===id)||{};
+    const form=document.querySelector('#pf');
+    const marketFieldset=[...form.querySelectorAll('fieldset')].find(item=>item.querySelector('legend')?.textContent.includes('Thị trường điểm đến'));
+    const hasData=!!id&&(T.read().prices.some(item=>item.program===id)||!!p.flightConditions||db.campaigns.some(item=>item.program===id));
+    const selector=document.createElement('label');
+    selector.className='field';
+    selector.innerHTML=`Dịch vụ của đợt tiếp thị<select name="serviceType" ${hasData?'disabled':''}><option value="stay" ${service(p)==='stay'?'selected':''}>Lưu trú</option><option value="flight" ${service(p)==='flight'?'selected':''}>Vé máy bay</option></select>`;
+    marketFieldset.before(selector);
+    if(hasData)selector.insertAdjacentHTML('beforeend','<small class="muted">Đợt đã có cấu hình liên kết; giữ nguyên dịch vụ.</small>');
+    const toggle=()=>{marketFieldset.hidden=form.elements.serviceType.value==='flight';if(marketFieldset.hidden){form.querySelector('[name="marketScope"][value="all"]').checked=true;marketFieldset.querySelectorAll('[name="markets"]').forEach(input=>input.checked=false)}};
+    form.elements.serviceType.onchange=toggle;
+    toggle();
+    const previousSubmit=form.onsubmit;
+    form.onsubmit=event=>{
+      const type=form.elements.serviceType.value;
+      previousSubmit(event);
+      if(document.querySelector('#modal').open)return;
+      T.update(data=>{const saved=data.programs.find(item=>item.id===programId);saved.serviceType=type;if(type==='flight')saved.markets=[]},'Lưu dịch vụ đợt tiếp thị');
+      programDetail();
+    };
+  };
+
+  const previousAction=programAction;
+  programAction=function(status){
+    const p=targetProgram();
+    if(status==='Đang mở'&&p.status==='Chờ duyệt'&&service(p)==='flight'&&!p.flightConditions){toast('Cấu hình điều kiện vé máy bay trước khi duyệt mở đợt.');return}
+    previousAction(status);
+  };
+
+  window.flightConditionForm=()=>{
+    const p=targetProgram(),condition=p.flightConditions||{};
+    modal('Điều kiện chương trình tiếp thị vé máy bay',`<form id="flightConditionForm">
+      <p class="muted">Bookese cấu hình trực tiếp, không có bước nhà cung cấp đăng ký. Thời gian áp dụng theo đợt ${e(p.start)} → ${e(p.end)}.</p>
+      ${select('Chuyến bay áp dụng','scope',[['all','Tất cả chuyến bay'],['domestic','Nội địa'],['international','Quốc tế']],condition.scope||'all')}
+      ${select('Hình thức giảm','discountType',[['amount','Giảm số tiền'],['percent','Giảm theo %']],condition.discountType||'amount')}
+      ${field('Mức giảm','discount','number',condition.discount||'','required min="1" step="1"')}
+      ${field('Giá trị đơn tối thiểu (đ, tùy chọn)','minimum','number',condition.minimum||'','min="0" step="1"')}
+      <label class="field" id="flightMaximum">Giảm tối đa (đ)<input name="maximum" type="number" min="1" step="1" value="${e(condition.maximum||'')}"></label>
+      <div id="flightConditionError" class="error"></div>
+      <div class="actions"><button type="button" onclick="closeModal()">Hủy</button><button class="primary">Lưu điều kiện</button></div>
+    </form>`);
+    const form=document.querySelector('#flightConditionForm');
+    const toggle=()=>{const percent=form.elements.discountType.value==='percent';form.querySelector('#flightMaximum').hidden=!percent;form.elements.maximum.required=percent};
+    form.elements.discountType.onchange=toggle;
+    toggle();
+    form.onsubmit=event=>{
+      event.preventDefault();
+      const data=Object.fromEntries(new FormData(form));
+      const discount=Number(data.discount),minimum=data.minimum===''?0:Number(data.minimum),maximum=data.maximum===''?0:Number(data.maximum);
+      if(!Number.isSafeInteger(discount)||discount<1||(data.discountType==='percent'&&discount>99)||!Number.isSafeInteger(minimum)||minimum<0||(data.discountType==='percent'&&(!Number.isSafeInteger(maximum)||maximum<1))){
+        form.querySelector('#flightConditionError').textContent='Kiểm tra mức giảm, đơn tối thiểu và mức giảm tối đa.';
+        return;
+      }
+      T.update(state=>{state.programs.find(item=>item.id===p.id).flightConditions={scope:data.scope,discountType:data.discountType,discount,minimum,maximum:data.discountType==='percent'?maximum:null}},'Lưu điều kiện vé máy bay của '+p.name);
+      closeModal();
+      programDetail();
+    };
+  };
 
   window.coinBonusForm=()=>{
     const p=targetProgram(),bonus=p.coinBonus||{};
     modal('Thưởng thêm xu · '+p.name,`<form id="coinBonusForm">
       <label><input type="checkbox" name="enabled" ${bonus.enabled?'checked':''}> Bật thưởng thêm xu cho đợt này</label>
-      <p class="muted">Dùng lịch nhận đặt và trạng thái của đợt tiếp thị: ${e(p.start)} → ${e(p.end)}.</p>
+      <p class="muted">Dịch vụ: <b>${serviceName(p)}</b>. Dùng thời gian và trạng thái của đợt tiếp thị: ${e(p.start)} → ${e(p.end)}.</p>
       <div class="fields" id="coinBonusFields">
-        ${select('Dịch vụ','service',[['Lưu trú','Lưu trú'],['Vé máy bay','Vé máy bay'],['Cả hai','Cả hai']],bonus.service||'Lưu trú')}
         ${field('Hệ số xu','multiplier','number',bonus.multiplier||2,'min="2" max="10" step="1"')}
         ${select('Hạn dùng phần xu thưởng thêm','months',[['3','3 tháng'],['4','4 tháng'],['5','5 tháng'],['6','6 tháng']],String(bonus.months||3))}
       </div>
@@ -24,78 +86,107 @@
     toggle();
     form.onsubmit=event=>{
       event.preventDefault();
-      const enabled=form.elements.enabled.checked;
-      const multiplier=Number(form.elements.multiplier.value);
-      if(enabled&&(!Number.isInteger(multiplier)||multiplier<2||multiplier>10)){
-        form.querySelector('#coinBonusError').textContent='Hệ số xu phải từ 2 đến 10.';
-        return;
-      }
-      const next={enabled,service:form.elements.service.value||bonus.service||'Lưu trú',multiplier:enabled?multiplier:Number(bonus.multiplier||2),months:Number(form.elements.months.value||bonus.months||3)};
+      const enabled=form.elements.enabled.checked,multiplier=Number(form.elements.multiplier.value);
+      if(enabled&&(!Number.isInteger(multiplier)||multiplier<2||multiplier>10)){form.querySelector('#coinBonusError').textContent='Hệ số xu phải từ 2 đến 10.';return}
+      const next={enabled,service:serviceName(p),multiplier:enabled?multiplier:Number(bonus.multiplier||2),months:Number(form.elements.months.value||bonus.months||3)};
       T.update(data=>{data.programs.find(item=>item.id===p.id).coinBonus=next},'Lưu thưởng thêm xu của đợt '+p.name);
       closeModal();
       programDetail();
     };
   };
 
-  window.flightOfferForm=id=>{
-    const p=targetProgram(),offer=(p.flightOffers||[]).find(item=>item.id===id)||{};
-    modal((id?'Chỉnh sửa':'Tạo')+' ưu đãi vé máy bay',`<form id="flightOfferForm">
-      ${field('Tên ưu đãi','name','text',offer.name,'required maxlength="100"')}
-      ${select('Phạm vi chuyến bay','scope',[['all','Tất cả chuyến bay'],['domestic','Nội địa'],['international','Quốc tế']],offer.scope||'all')}
-      ${field('Số tiền giảm trên đơn (đ)','amount','number',offer.amount,'required min="1" step="1"')}
-      <p class="muted">Ưu đãi dùng lịch nhận đặt của đợt: ${e(p.start)} → ${e(p.end)}. Chỉ áp dụng cho đơn vé mới khi đợt và ưu đãi đang mở.</p>
-      <div id="flightOfferError" class="error"></div>
-      <div class="actions"><button type="button" onclick="closeModal()">Hủy</button><button class="primary">Lưu nháp</button></div>
-    </form>`);
-    document.querySelector('#flightOfferForm').onsubmit=event=>{
-      event.preventDefault();
-      const data=Object.fromEntries(new FormData(event.target));
-      const amount=Number(data.amount);
-      if(!data.name.trim()||!Number.isSafeInteger(amount)||amount<1){
-        document.querySelector('#flightOfferError').textContent='Nhập tên và số tiền giảm hợp lệ.';
+  const previousRows=marketingRows;
+  marketingRows=function(){
+    previousRows();
+    const rows=document.querySelectorAll('#marketingRows tr');
+    rows.forEach(row=>{
+      if(row.classList.contains('empty')||row.cells.length!==7){row.cells[0].colSpan=8;return}
+      const button=row.querySelector('button[onclick^="programRoute"]');
+      const id=button?.getAttribute('onclick').match(/programRoute\('([^']+)'\)/)?.[1];
+      const p=T.read().programs.find(item=>item.id===id);
+      if(!p)return;
+      row.cells[0].insertAdjacentHTML('afterend',`<td>${serviceName(p)}</td>`);
+      if(service(p)==='flight'){
+        row.cells[3].textContent='—';
+        row.cells[4].textContent=p.flightConditions?'1':'0';
+      }
+    });
+  };
+  const previousMarketing=marketing;
+  marketing=function(){
+    previousMarketing();
+    const head=document.querySelector('#marketingRows')?.closest('table')?.querySelector('thead tr');
+    if(!head)return;
+    head.cells[0].insertAdjacentHTML('afterend','<th>Dịch vụ</th>');
+    head.cells[4].textContent='Ưu đãi / điều kiện';
+  };
+
+  const previousCampaignForm=campaignForm;
+  campaignForm=function(){
+    previousCampaignForm();
+    const form=document.querySelector('#cf');
+    if(!form?.elements.program||!form.elements.service)return;
+    const existing=!!editing;
+    const linked=T.read().programs.find(item=>item.id===form.elements.program.value);
+    if(linked&&!existing){form.elements.service.value=service(linked)==='flight'?'flight':'hotel';form.elements.service.dispatchEvent(new Event('change',{bubbles:true}))}
+    const oldChange=form.onchange;
+    const adjust=()=>{
+      const flight=form.elements.service.value==='flight';
+      for(const name of ['stayStart','stayEnd']){
+        const input=form.elements[name];
+        if(input){input.closest('label').hidden=flight;if(flight){input.disabled=true;input.value=''}}
+      }
+      const hint=form.querySelector('#discountBox .hint');
+      if(hint&&flight)hint.textContent='Các điều kiện áp dụng đồng thời. Tính giảm trên giá vé đủ điều kiện, trước xu; một mã Bookese cho một đơn.';
+    };
+    form.onchange=event=>{
+      if(event.target===form.elements.program&&!existing){
+        const p=T.read().programs.find(item=>item.id===form.elements.program.value);
+        if(p)form.elements.service.value=service(p)==='flight'?'flight':'hotel';
+      }
+      oldChange?.(event);
+      adjust();
+    };
+    adjust();
+    const submit=form.onsubmit;
+    form.onsubmit=event=>{
+      const p=T.read().programs.find(item=>item.id===form.elements.program.value);
+      if(p&&form.elements.service.value!==(service(p)==='flight'?'flight':'hotel')){
+        event.preventDefault();
+        form.querySelector('#formerror').textContent='Loại dịch vụ của voucher phải khớp với đợt tiếp thị liên kết.';
         return;
       }
-      T.update(state=>{
-        const period=state.programs.find(item=>item.id===p.id);
-        period.flightOffers||=[];
-        const next={...offer,...data,amount,id:id||crypto.randomUUID(),status:offer.status||'Nháp'};
-        period.flightOffers=id?period.flightOffers.map(item=>item.id===id?next:item):[...period.flightOffers,next];
-      },'Lưu ưu đãi vé máy bay '+data.name);
-      closeModal();
-      programDetail();
+      submit(event);
     };
   };
 
-  window.flightOfferToggle=id=>{
-    const p=targetProgram(),offer=(p.flightOffers||[]).find(item=>item.id===id);
-    if(!offer)return;
-    if(offer.status!=='Đang mở'&&!activePeriod()){toast('Cần mở đợt tiếp thị trước khi mở ưu đãi vé.');return}
-    T.update(state=>{
-      const item=state.programs.find(x=>x.id===p.id).flightOffers.find(x=>x.id===id);
-      item.status=item.status==='Đang mở'?'Tạm ngưng':'Đang mở';
-    },'Đổi trạng thái ưu đãi vé máy bay '+offer.name);
-    programDetail();
-  };
-
-  const originalDetail=programDetail;
+  const previousDetail=programDetail;
   programDetail=function(){
-    originalDetail();
+    previousDetail();
     const p=targetProgram();
     if(!p)return;
-    const bonus=p.coinBonus||{},offers=p.flightOffers||[];
-    const flightRows=offers.map(offer=>`<tr>
-      <td>${e(offer.name)}</td><td>${e(scopeLabel[offer.scope]||scopeLabel.all)}</td>
-      <td>${number(offer.amount)}đ</td><td>${e(offer.status)}</td>
-      <td><button onclick="flightOfferForm('${offer.id}')">Xem / sửa</button> <button onclick="flightOfferToggle('${offer.id}')">${offer.status==='Đang mở'?'Tạm ngưng':'Mở ưu đãi'}</button></td>
-    </tr>`).join('')||'<tr><td colspan="5">Chưa có ưu đãi vé máy bay trong đợt này.</td></tr>';
-    const flight=`<section class="card"><div class="row"><h2>Ưu đãi vé máy bay</h2><button class="primary" onclick="flightOfferForm()">＋ Tạo ưu đãi vé máy bay</button></div>
-      <p class="muted">Bookese cấu hình ưu đãi trên đơn vé; dùng lịch và trạng thái của đợt tiếp thị.</p>
-      <table><thead><tr><th>Ưu đãi</th><th>Phạm vi</th><th>Giảm trên đơn</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>${flightRows}</tbody></table></section>`;
-    const bonusDetails=bonus.enabled?`<p><b>${e(bonus.service)}</b> · ${number(bonus.multiplier)}× xu nền · phần thưởng thêm dùng trong ${number(bonus.months)} tháng.</p>
-      <p class="muted">Áp dụng cho đơn đủ điều kiện sau khi hoàn tất dịch vụ, khi đợt tiếp thị đang mở.</p>`:'<p class="muted">Chưa áp dụng thưởng thêm xu cho đợt này.</p>';
-    const coins=`<section class="card"><div class="row"><h2>Thưởng thêm xu</h2><button class="primary" onclick="coinBonusForm()">${bonus.enabled?'Chỉnh sửa thưởng xu':'＋ Thiết lập thưởng xu'}</button></div>${bonusDetails}</section>`;
-    const lodging=[...document.querySelectorAll('#app section.card')].find(section=>section.querySelector('h2')?.textContent==='Ưu đãi giá chỗ nghỉ');
-    lodging?.insertAdjacentHTML('afterend',flight+coins);
+    const flight=service(p)==='flight',bonus=p.coinBonus||{};
+    const cards=[...document.querySelectorAll('#app section.card')];
+    const header=cards.find(card=>card.querySelector('h2')?.textContent===p.name);
+    const lodging=cards.find(card=>card.querySelector('h2')?.textContent==='Ưu đãi giá chỗ nghỉ');
+    const registrations=cards.find(card=>card.querySelector('h2')?.textContent==='Chỗ nghỉ đăng ký');
+    if(header){
+      header.insertAdjacentHTML('beforeend',`<p><b>Dịch vụ:</b> ${serviceName(p)}</p>`);
+      if(flight){const market=[...header.querySelectorAll('p')].find(item=>item.textContent.startsWith('Thị trường:'));market?.remove()}
+    }
+    let preceding=lodging;
+    if(flight){
+      lodging?.remove();
+      registrations?.remove();
+      const c=p.flightConditions;
+      const description=c?`<p><b>Chuyến bay:</b> ${e(scopes[c.scope]||scopes.all)}</p><p><b>Mức giảm:</b> ${c.discountType==='percent'?`${number(c.discount)}% · tối đa ${number(c.maximum)}đ`:`${number(c.discount)}đ / đơn`}</p><p><b>Đơn tối thiểu:</b> ${c.minimum?number(c.minimum)+'đ':'Không yêu cầu'}</p>`:'<p class="muted">Chưa cấu hình điều kiện vé máy bay. Cần lưu điều kiện trước khi duyệt mở đợt.</p>';
+      const panel=`<section class="card"><div class="row"><h2>Điều kiện chương trình tiếp thị vé máy bay</h2><button class="primary" onclick="flightConditionForm()">${c?'Chỉnh sửa điều kiện':'＋ Thiết lập điều kiện'}</button></div><p class="muted">Bookese cấu hình trực tiếp cho vé máy bay; không có nhà cung cấp đăng ký.</p>${description}</section>`;
+      header.insertAdjacentHTML('afterend',panel);
+      preceding=header.nextElementSibling;
+    }
+    const details=bonus.enabled?`<p><b>${serviceName(p)}</b> · ${number(bonus.multiplier)}× xu nền · phần thưởng thêm dùng trong ${number(bonus.months)} tháng.</p><p class="muted">Áp dụng sau khi đơn hoàn tất hợp lệ trong thời gian đợt mở.</p>`:'<p class="muted">Chưa áp dụng thưởng thêm xu cho đợt này.</p>';
+    preceding?.insertAdjacentHTML('afterend',`<section class="card"><div class="row"><h2>Thưởng thêm xu</h2><button class="primary" onclick="coinBonusForm()">${bonus.enabled?'Chỉnh sửa thưởng xu':'＋ Thiết lập thưởng xu'}</button></div>${details}</section>`);
   };
   if(location.hash==='#program')programDetail();
+  if(location.hash==='#marketing')marketing();
 })();

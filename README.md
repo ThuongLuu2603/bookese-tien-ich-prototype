@@ -1,5 +1,7 @@
 # Bookese — Prototype tiện ích khách sạn
 
+Prototype CS hỗ trợ booking: [mở bản tương tác](https://thuongluu2603.github.io/bookese-tien-ich-prototype/cs-booking/). Bản này dùng dữ liệu demo, lưu thao tác thử trong trình duyệt.
+
 Hai prototype HTML độc lập, có sẵn CSS, JavaScript và biểu tượng:
 
 - `Bookese-Tien-ich-Prototype.html`: giao diện khách hàng, gồm ba cách hiển thị Gọn / Liền mạch / Theo nhóm.

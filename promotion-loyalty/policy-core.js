@@ -2,20 +2,20 @@
 const day=s=>Date.parse(s+'T00:00:00Z'),date=(s,n)=>new Date(day(s)+n*86400000).toISOString().slice(0,10);
 function check(p,s,d){
  if(p.status!=='active')return 'Chương trình chưa hoạt động';
- if(p.type==='Flash Sale'){const a=Date.parse(p.boostStart+'+07:00'),b=Date.parse(p.boostEnd+'+07:00'),booking=Date.parse(s.book+'T12:00:00+07:00');if(!Number.isFinite(a)||!Number.isFinite(b)||b<=a||booking<a||booking>=b)return 'Ngoài cửa sổ Flash Sale (giả lập đặt lúc 12:00)';}
+ if(p.type==='Flash Sale'){const a=Date.parse(p.boostStart+'+07:00'),b=Date.parse(p.boostEnd+'+07:00'),booking=s.bookTime??Date.parse(s.book+'T12:00:00+07:00');if(!Number.isFinite(a)||!Number.isFinite(b)||b<=a||b-a>5*86400000||booking<a||booking>=b)return 'Ngoài cửa sổ Flash Sale (giả lập đặt lúc 12:00)';}
  if(p.type==='Thứ hạng'&&p.requiresReview&&!p.rankApproved)return 'Đợt Thứ hạng chờ Bookese duyệt';
  if(p.type==='Thứ hạng'){
- const a=Date.parse(p.boostStart+'+07:00'),b=Date.parse(p.boostEnd+'+07:00'),booking=Date.parse(s.book+'T12:00:00+07:00');
+ const a=Date.parse(p.boostStart+'+07:00'),b=Date.parse(p.boostEnd+'+07:00'),booking=s.bookTime??Date.parse(s.book+'T12:00:00+07:00');
  if(!Number.isFinite(a)||!Number.isFinite(b)||b<=a||b-a>72*3600000)return 'Cần cấu hình đợt tối đa 72 giờ';
  if(booking<a||booking>=b)return 'Ngoài đợt Thứ hạng (giả lập đặt lúc 12:00)';
 
  }
- if(s.book<p.start||s.book>p.end)return 'Ngoài thời gian nhận đặt';
- if(p.wholeStay&&(s.stay<p.stayStart||date(s.stay,s.nights-1)>p.stayEnd))return 'Cần toàn bộ kỳ lưu trú trong lịch';
- if(p.wholeStay&&Array.from({length:s.nights},(_,i)=>date(s.stay,i)).some(x=>p.excluded?.includes(x)||(p.weekdays&&!p.weekdays.includes(new Date(day(x)).getUTCDay()))))return 'Cần toàn bộ kỳ lưu trú hợp lệ';
- if(p.excluded?.includes(d))return 'Ngày loại trừ';
- if(d<p.stayStart||d>p.stayEnd)return 'Đêm ngoài lịch ưu đãi';
- if(p.weekdays&&!p.weekdays.includes(new Date(day(d)).getUTCDay()))return 'Ngày trong tuần không áp dụng';
+ if(p.type!=='Flash Sale'&&(s.book<p.start||s.book>p.end))return 'Ngoài thời gian nhận đặt';
+ if(p.type!=='Flash Sale'&&p.wholeStay&&(s.stay<p.stayStart||date(s.stay,s.nights-1)>p.stayEnd))return 'Cần toàn bộ kỳ lưu trú trong lịch';
+ if(p.type!=='Flash Sale'&&p.wholeStay&&Array.from({length:s.nights},(_,i)=>date(s.stay,i)).some(x=>p.excluded?.includes(x)||(p.weekdays&&!p.weekdays.includes(new Date(day(x)).getUTCDay()))))return 'Cần toàn bộ kỳ lưu trú hợp lệ';
+ if(p.type!=='Flash Sale'&&p.excluded?.includes(d))return 'Ngày loại trừ';
+ if(p.type!=='Flash Sale'&&(d<p.stayStart||d>p.stayEnd))return 'Đêm ngoài lịch ưu đãi';
+ if(p.type!=='Flash Sale'&&p.weekdays&&!p.weekdays.includes(new Date(day(d)).getUTCDay()))return 'Ngày trong tuần không áp dụng';
  
  if(Array.isArray(p.roomRates)){if(!p.roomRates.includes(s.room+'|'+(s.ratePlan||'flex')))return 'Không áp dụng phòng / loại giá này';}else if(p.room!=='all'&&(p.room!==s.room||(s.ratePlan||'flex')!=='flex'))return 'Không áp dụng phòng / loại giá này';
  const lead=Math.round((day(s.stay)-day(s.book))/86400000);
@@ -40,7 +40,7 @@ function quote(data,s,prices){
  for(let i=0;i<s.nights;i++){
   let d=date(s.stay,i),base=prices[i],floor=Math.ceil(base*(10000-Math.round(data.maxDiscount*100))/10000),eligible=data.items.filter(p=>!check(p,s,d)),combos=[];
   const add=(branch,ps)=>{let price=base;for(const p of ps)price=Math.floor(price*(10000-Math.round(p.rate*100))/10000);combos.push({branch,ps,price,ok:price>=floor})};
-  const m=s.bookingMode==='agency'||s.tier<0||!data.member||data.memberExcluded?.includes(d)?0:s.tier===2&&data.member===2?15:10,mem=m?[{name:'Giá thành viên',rate:m}]:[];
+  const m=s.bookingMode==='agency'||s.tier<0||!data.member||data.memberExcluded?.includes(d)?0:s.tier>=1&&data.member===2?15:10,mem=m?[{name:'Giá thành viên',rate:m}]:[];
   eligible.filter(p=>p.group==='exclusive').forEach(p=>add('A',[p]));eligible.filter(p=>p.group==='campaign').forEach(p=>add('B',[p,...mem]));
   for(const c of [null,...eligible.filter(p=>p.group==='condition')])for(const t of [null,...eligible.filter(p=>p.group==='market')])add('C',[c,t,...mem].filter(Boolean));add('Gốc',[]);
   combos.sort((a,b)=>a.price-b.price||a.ps.length-b.ps.length||a.branch.localeCompare(b.branch)||a.ps.map(p=>p.id||0).join(',').localeCompare(b.ps.map(p=>p.id||0).join(',')));

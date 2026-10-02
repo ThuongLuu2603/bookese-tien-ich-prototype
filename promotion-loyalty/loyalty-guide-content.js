@@ -46,15 +46,15 @@
     'Mỗi lô giữ nguồn, ngày nhận, hạn dùng, số xu còn lại. Dùng lô hết hạn sớm trước; nếu cùng hạn, dùng lô nhận trước.'
   ]));
   extras.history = () => card('Một giao dịch, nhiều nơi cùng đối chiếu', p('Lịch sử xu toàn hệ thống, hồ sơ khách, chi tiết đơn, lượt đổi quà và lịch sử xu phía khách dùng cùng mã giao dịch. Không sửa/xóa giao dịch đã ghi nhận; điều chỉnh tạo giao dịch mới liên kết bản gốc, có người thực hiện và lý do.') + table(['Sự kiện','Ảnh hưởng'],[
-    ['Đặt đơn','Tạo xu chờ; chưa tăng số dư.'],['Hoàn tất dịch vụ','Chuyển xu chờ thành xu nhận, không cộng cả hai lần.'],['Thanh toán / đổi quà','Trừ số xu đã dùng; giao dịch thất bại không để lại khoản trừ.'],['Hoàn xu đã dùng','Cộng lại theo phần được hoàn, gắn đơn/lượt đổi và giao dịch gốc.'],['Thu hồi xu thưởng','Trừ xu thưởng không còn đủ điều kiện; có thể làm số dư âm.'],['Hết hạn','Trừ phần còn lại của lô hết hạn.'],['Điều chỉnh được duyệt','Cộng/trừ đúng số chênh lệch, ghi người thao tác và lý do.']
+    ['Đặt đơn','Tạo xu chờ; chưa tăng số dư.'],['Hoàn tất dịch vụ','Chuyển xu chờ thành xu nhận, không cộng cả hai lần.'],['Thanh toán / đổi quà','Trừ số xu đã dùng; giao dịch thất bại không để lại khoản trừ.'],['Hoàn xu đã dùng','Hủy đơn do lỗi hệ thống/NCC/Bookese: trả toàn bộ xu đã dùng. Khách chủ động hủy: không trả. Gắn giao dịch gốc.'],['Thu hồi xu thưởng','Trừ xu thưởng không còn đủ điều kiện; có thể làm số dư âm.'],['Hết hạn','Trừ phần còn lại của lô hết hạn.'],['Điều chỉnh được duyệt','Cộng/trừ đúng số chênh lệch, ghi người thao tác và lý do.']
   ]));
-  extras.refund = () => card('Ví dụ hoàn một phần và sửa đơn', table(['Tình huống','Kết quả'],[
-    ['Đã dùng 100.000 xu, nhận 8.340 xu; hoàn 50%','Trả 50.000 xu đã dùng theo hạn lô gốc và thu hồi 4.170 xu thưởng. Đây là hai giao dịch khác nhau.'],
-    ['Sau đó tổng tỷ lệ hoàn tăng lên 80%','Tổng phải trả 80.000, đã trả 50.000 → trả thêm 30.000. Tổng thu hồi 6.672, đã thu 4.170 → thu thêm 2.502.'],
-    ['Hoàn vào tháng sau tháng dùng xu','Trả xu còn hạn theo quy tắc; không tăng thêm hạn mức thanh toán tháng mới.'],
-    ['Sửa đơn làm giảm trần sử dụng xu','Giữ tối đa số xu đã dùng trong trần mới và tiền còn trả; trả phần dư. Không tự trừ thêm xu khi giá tăng.'],
-    ['Đổi chặng bay / phí dịch vụ','Tính lại xu chờ theo từng chặng thay đổi và trần phí dịch vụ; không cộng lại điểm cho cùng chặng hoàn tất.']
-  ]) + p('Khi lô đã hết hạn: khách chủ động hủy không được gia hạn; lỗi dịch vụ tạo lô bù hạn 30 ngày theo quy trình, liên kết giao dịch gốc. Ngoại lệ CS cần lý do và phê duyệt.'));
+  extras.refund = () => card('Ví dụ theo chính sách ngày 02/10/2026', table(['Tình huống','Kết quả'],[
+    ['Vé bay: 400.000 + 600.000 thuế phí + 50.000 phí xuất vé − 50.000 voucher − 10.000 xu','Khách thanh toán 990.000đ. Khách yêu cầu hoàn, phí hãng 500.000đ → hoàn tiền 490.000đ; không trả voucher hoặc 10.000 xu đã dùng.'],
+    ['Khách sạn: thực trả 990.000đ; khách hủy, phí 50%','Phí hủy 495.000đ; hoàn 495.000đ. Không trả voucher/xu đã dùng.'],
+    ['Khách hủy, không tính phí','Hoàn đủ tiền thực trả; voucher và xu đã dùng vẫn không được hoàn.'],
+    ['Lỗi hệ thống / NCC / Bookese','Hoàn đủ tiền thực trả và toàn bộ voucher/xu đã dùng; không thu phí hủy hoặc xử lý.'],
+    ['Xu thưởng của dịch vụ bị hủy trong mọi trường hợp','Hủy toàn bộ xu chờ; thu hồi toàn bộ xu đã cộng, không nhân tỷ lệ hoàn tiền. Không thưởng trên phí hủy/hoàn/xử lý.']
+  ]) + p('Chỉ áp dụng cho dịch vụ bị hủy. Giữ đơn và lịch sử đối soát; không xóa bản ghi. Sửa đơn còn tiếp tục sử dụng dịch vụ là luồng riêng.'));
   extras.partner = () => card('Tách ba nguồn quyền lợi của đối tác', table(['Nguồn','Đặc điểm'],[
     ['Xu khách lẻ','Tích khi tự sử dụng dịch vụ; không rút tiền.'],['Thù lao theo đơn','Theo kênh đặt hộ/link/mã và đơn hoàn tất; theo dõi riêng, chịu hoàn/thu hồi và điều kiện chi trả.'],['Tài trợ nội dung Đại sứ','Theo hợp đồng, sản phẩm nội dung và nghiệm thu; không tự cộng như xu đặt phòng.']
   ]) + p('Bậc đại lý theo đặc tả đã chốt là 60/120 đơn hoàn tất quý; không dùng lại mốc 130 từ nội dung cũ. Duy trì 30 đơn/quý và giá trị bình quân từ 1,2 triệu; 20 đơn chỉ là nhắc tiến độ. Thay bậc áp quý kế tiếp, không hồi tố.')) + card('Phương án tài trợ Đại sứ trong đề án', table(['Phương án dự kiến','Điều kiện đề xuất'],[
